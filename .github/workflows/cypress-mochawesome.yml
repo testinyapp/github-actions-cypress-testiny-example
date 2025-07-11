@@ -1,0 +1,44 @@
+name: Cypress Tests (Mochawesome)
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+jobs:
+  test:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Cypress run chrome
+      uses: cypress-io/github-action@v6
+      with:
+        browser: chrome
+    - name: Upload test results to Testiny
+      if: ${{ !cancelled() }}
+      env: 
+        TESTINY_API_KEY: ${{ secrets.TESTINY_API_KEY }}
+      run: npx @testiny/cli automation --project 57 --source cypress-tests --field-values browser=chrome --incomplete --cypress mochawesome-report/*.json 
+    - name: Cleanup folder
+      run: rm -rf results/*
+    - name: Cypress run firefox
+      uses: cypress-io/github-action@v6
+      with:
+        browser: firefox
+    - name: Upload test results to Testiny
+      if: ${{ !cancelled() }}
+      env: 
+        TESTINY_API_KEY: ${{ secrets.TESTINY_API_KEY }}
+      run: npx @testiny/cli automation --project 57 --source cypress-tests --field-values browser=firefox --incomplete --cypress mochawesome-report/*.json 
+
+    # Mark test run as complete
+    - name: Complete test run in Testiny
+      if: ${{ !cancelled() }}
+      env: 
+        TESTINY_API_KEY: ${{ secrets.TESTINY_API_KEY }}
+      run: npx @testiny/cli automation --project 57 --source cypress-tests --complete-runs
